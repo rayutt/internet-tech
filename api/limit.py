@@ -6,14 +6,6 @@ from functools import update_wrapper
 from flask import request, g
 from flask import Flask, jsonify 
 
-app = Flask(__name__)
-
-"""
-    For this exercise the IP address of the client as the identifier.
-    This way rate limiting works even for users who are not logged in.
-"""
-
-
 
 class RateLimit(object):
     # give the key an extra 10 seconds to expire
@@ -66,10 +58,6 @@ def ratelimit(limit, per=300, send_x_headers=True,
     return decorator
 
 
-
-
-
-@app.after_request
 def inject_x_rate_headers(response):
     limit = get_view_rate_limit()
     if limit and limit.send_x_headers:
@@ -78,13 +66,3 @@ def inject_x_rate_headers(response):
         h.add('X-RateLimit-Limit', str(limit.limit))
         h.add('X-RateLimit-Reset', str(limit.reset))
     return response
-
-@app.route('/rate-limited')
-@ratelimit(limit=2, per=10 * 1)
-def index():
-    return jsonify({'response':'This is a rate limited response'})
-
-if __name__ == '__main__':
-	app.secret_key = 'super_secret_key'
-	app.debug = True
-	app.run(host = '0.0.0.0', port = 5000)
