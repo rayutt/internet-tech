@@ -1,5 +1,6 @@
 #imported libs
-from sqlalchemy import Column,Integer,String, ForeignKey
+import os
+from sqlalchemy import Column,Integer,String, ForeignKey, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
@@ -9,12 +10,26 @@ from itsdangerous import(TimedJSONWebSignatureSerializer as Serializer, BadSigna
 
 Base = declarative_base()
 
+
+db_filename = os.path.dirname(os.path.dirname(__file__))+'/project.db'
+engine = create_engine('sqlite:///'+db_filename)
+
+secret_key = "fish"
+
 class User(Base):
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
     picture = Column(String)
     email = Column(String)
     password_hash = Column(String(64))
+
+    @property
+    def serialize(self):
+        return {
+            'id' : self.id,
+            'picture' : self.picture,
+            'email' : self.email
+        }
 
     def hash_password(self, password):
         self.password_hash = pwd_context.encrypt(password)
@@ -23,57 +38,102 @@ class User(Base):
         return pwd_context.verify(password, self.password_hash)
 
     def generate_auth_token(self, expiration=600):
-    	s = Serializer(secret_key, expires_in = expiration)
-    	return s.dumps({'id': self.id })
+        s = Serializer(secret_key, expires_in = expiration)
+        return s.dumps({'id': self.id })
 
     @staticmethod
     def verify_auth_token(token):
-    	s = Serializer(secret_key)
-    	try:
-    		data = s.loads(token)
-    	except SignatureExpired:
-    		#Valid Token, but expired
-    		return None
-    	except BadSignature:
-    		#Invalid Token
-    		return None
-    	user_id = data['id']
-    	return user_id
+        s = Serializer(secret_key)
+        try:
+            data = s.loads(token)
+        except SignatureExpired:
+            #Valid Token, but expired
+            return None
+        except BadSignature:
+            #Invalid Token
+            return None
+        user_id = data['id']
+        return user_id
 
 
 class Request(Base):
- 	__tablename__ = 'requests'
- 	rid = Column(Integer, primary_key=True)
- 	user_id = Column(Integer, ForeignKey('user.id'))
- 	meal_type = Column(String(50))
- 	location_string = Column(String(100))
- 	latitude = Column(String(200))
- 	longitude = Column(String(200))
- 	meal_time = Column(String)
- 	filled = Column(String)
- 	user = relationship("Request", backref ="requests")
+    __tablename__ = 'request'
+    rid = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    meal_type = Column(String(50))
+    location_string = Column(String(100))
+    latitude = Column(String(200))
+    longitude = Column(String(200))
+    meal_time = Column(DateTime)
+    filled = Column(Boolean)
+
+    @property
+    def serialize(self):
+        return {
+            'id' : self.rid,
+            'user_id' : self.user_id,
+            'meal_type' : self.meal_type,
+            'location_string' : self.location_string,
+            'latitude' : self.latitude,
+            'longitude' : self.longitude,
+            'meal_time' : self.meal_time,
+            'filled' : self.filled
+        }
 
 class Proposal(Base):
-    __tablename__ = 'proposals'
+    __tablename__ = 'proposal'
     pid = Column(Integer, primary_key=True)
-    user_proposed_to = Column(Integer)
-    user_proposed_from = Column(Integer)
-    request_id = Column(Integer, ForeignKey('requests.rid'))
-    filled = Column(String(10))
-    request = relationship("Proposal", backref ="proposals")
+    user_proposed_to = Column(Integer, ForeignKey('user.id'))
+    user_proposed_from = Column(Integer, ForeignKey('user.id'))
+    request_id = Column(Integer, ForeignKey('request.rid'))
+    filled = Column(Boolean)
+
+    @property
+    def serialize(self):
+        return {
+            'id' : self.pid,
+            'user_proposed_to' : self.user_proposed_to,
+            'user_proposed_from' : self.user_proposed_from,
+            'location_string' : self.location_string,
+            'request_id' : self.request_id,
+            'filled' : self.filled
+        }
 
 class MealDate(Base):
-    __tablename__= 'mealDates'
-    rid = Column(Integer, primary_key=True)
-    user_1 = Column(Integer)
-    user_2= Column(Integer)
+    __tablename__= 'meal_date'
+    mdid = Column(Integer, primary_key=True)
+    user_1 = Column(Integer, ForeignKey('user.id'))
+    user_2= Column(Integer, ForeignKey('user.id'))
     restaurant_name = Column(String(100))
     restaurant_address = Column(String)
-    restauramt_picture = Column(String)
-    meal_time = Column(String)
+    restaurant_picture = Column(String)
+    meal_time = Column(DateTime)
+
+    @property
+    def serialize(self):
+        return {
+            'id' : self.mdid,
+            'user_1' : self.user_1,
+            'user_2' : self.user_2,
+            'restaurant_name' : self.restaurant_name,
+            'restaurant_address' : self.restaurant_address,
+            'restaurant_picture' : self.restaurant_picture,
+            'meal_time' : self.meal_time
+        }
     
 #creates the database
+def create_db():
+    try:
+        os.remove(db_filename)
+    except OSError:
+        pass
+    finally:
+        Base.metadata.create_all(engine)
 
-engine = create_engine('sqlite:///project.db')
 
-Base.metadata.create_all(engine)
+def get_db_session():
+    Base.metadata.bind = engine
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    return session
+
