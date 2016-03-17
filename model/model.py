@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 from passlib.apps import custom_app_context as pwd_context
 import random, string
-from itsdangerous import(TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
+from itsdangerous import(TimedJSONWebSignatureSerializer as JSONWebSignatureSerializer, BadSignature, SignatureExpired)
 
 Base = declarative_base()
 
@@ -18,6 +18,7 @@ secret_key = "fish"
 
 class User(Base):
     __tablename__ = 'user'
+    sqlite_autoincrement=True
     id = Column(Integer, primary_key=True)
     picture = Column(String)
     email = Column(String)
@@ -31,19 +32,23 @@ class User(Base):
             'email' : self.email
         }
 
-    def hash_password(self, password):
-        self.password_hash = pwd_context.encrypt(password)
+    @staticmethod
+    def hash_password(password):
+        return  pwd_context.encrypt(password)
 
-    def verify_password(self, password):
-        return pwd_context.verify(password, self.password_hash)
+    @staticmethod
+    def verify_password(password, hashed_password):
+        return pwd_context.verify(password, hashed_password)
 
-    def generate_auth_token(self, expiration=600):
-        s = Serializer(secret_key, expires_in = expiration)
-        return s.dumps({'id': self.id })
+    @staticmethod
+    def generate_auth_token(id, expiration=600):
+        s = JSONWebSignatureSerializer(secret_key, expires_in = expiration)
+        #convert to string
+        return s.dumps({'id': id }).decode("utf-8")
 
     @staticmethod
     def verify_auth_token(token):
-        s = Serializer(secret_key)
+        s = JSONWebSignatureSerializer(secret_key)
         try:
             data = s.loads(token)
         except SignatureExpired:
@@ -58,19 +63,20 @@ class User(Base):
 
 class Request(Base):
     __tablename__ = 'request'
-    rid = Column(Integer, primary_key=True)
+    sqlite_autoincrement=True
+    id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id'))
     meal_type = Column(String(50))
     location_string = Column(String(100))
     latitude = Column(String(200))
     longitude = Column(String(200))
     meal_time = Column(DateTime)
-    filled = Column(Boolean)
+    filled = Column(Boolean, default=False)
 
     @property
     def serialize(self):
         return {
-            'id' : self.rid,
+            'id' : self.id,
             'user_id' : self.user_id,
             'meal_type' : self.meal_type,
             'location_string' : self.location_string,
@@ -82,16 +88,17 @@ class Request(Base):
 
 class Proposal(Base):
     __tablename__ = 'proposal'
-    pid = Column(Integer, primary_key=True)
+    sqlite_autoincrement=True
+    id = Column(Integer, primary_key=True)
     user_proposed_to = Column(Integer, ForeignKey('user.id'))
     user_proposed_from = Column(Integer, ForeignKey('user.id'))
-    request_id = Column(Integer, ForeignKey('request.rid'))
-    filled = Column(Boolean)
+    request_id = Column(Integer, ForeignKey('request.id'))
+    filled = Column(Boolean, default=False)
 
     @property
     def serialize(self):
         return {
-            'id' : self.pid,
+            'id' : self.id,
             'user_proposed_to' : self.user_proposed_to,
             'user_proposed_from' : self.user_proposed_from,
             'location_string' : self.location_string,
@@ -101,9 +108,10 @@ class Proposal(Base):
 
 class MealDate(Base):
     __tablename__= 'meal_date'
-    mdid = Column(Integer, primary_key=True)
+    sqlite_autoincrement=True
+    id = Column(Integer, primary_key=True)
     user_1 = Column(Integer, ForeignKey('user.id'))
-    user_2= Column(Integer, ForeignKey('user.id'))
+    user_2 = Column(Integer, ForeignKey('user.id'))
     restaurant_name = Column(String(100))
     restaurant_address = Column(String)
     restaurant_picture = Column(String)
@@ -112,7 +120,7 @@ class MealDate(Base):
     @property
     def serialize(self):
         return {
-            'id' : self.mdid,
+            'id' : self.id,
             'user_1' : self.user_1,
             'user_2' : self.user_2,
             'restaurant_name' : self.restaurant_name,
