@@ -3,15 +3,17 @@ from functools import update_wrapper
 from flask import request, g
 from flask import Flask, jsonify
 import limit
-from model.model import Base, User, Request, Proposal, MealDate, get_db_session
+from model import Base, User, Request, Proposal, MealDate, get_db_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 import json, datetime, decimal
 
+
 session = get_db_session()
 
 app = Flask(__name__)
+
 
 @app.after_request
 def inject_headers(response):
@@ -29,8 +31,32 @@ def get_not_implemented_msg():
 def get_invalid_input_msg(fields):
 	return jsonify({'error': 'Invalid input in one or more of fields: '+fields})
 
-#START main
+#authenciates a user
+def require_token(func):
+ def validate(*args, **kwargs):
+  token = request.headers.get('Authorization')
+  id = User.verify_auth_token(token) if token else None
+  if id:
+   g.user = id
+   return func(*args, **kwargs)
+  else:
+   return jsonify({'error': 'Invalid token'})
+ return validate
+	
+#creates a user if the oauth is successful
+def create_user(answer):
+	answer.json()
+	name = data['name']
+	picture = data['picture']
+	email = data['email']
+	user = session.query(User).filter_by(email=email).first()
+	if not user:
+		user = User(username = name, picture = picture, email = email)
+		session.add(user)
+		session.commit()
 
+#START main
+# @limit.ratelimit(limit=2, per=10 * 1)
 @app.route('/api/v1/<provider>/login', methods=['POST'])
 def login(provider):
 	if provider == 'gmail':
@@ -48,11 +74,13 @@ def login(provider):
 			#keep error message generic to avoid leaking info to attacker
 			return jsonify({'error': 'Invalid username and/or password'})
 
+# @limit.ratelimit(limit=2, per=10 * 1)
 @app.route('/api/v1/<provider>/logout', methods=['POST'])
 def logout(provider):
     return get_not_implemented_msg()
 
-
+@require_token
+# @limit.ratelimit(limit=2, per=10 * 1)
 @app.route('/api/v1/users', methods=['GET','POST', 'PUT', 'DELETE'])
 def process_users():
 	if request.method == 'GET':
@@ -74,11 +102,18 @@ def process_users():
 		else:
 			return get_invalid_input_msg("email, password")
 	elif request.method == 'PUT':
+		#user = User.query(id)
+		#user.name = 'username'
+		#session.commit()
 		return get_not_implemented_msg()
 	elif request.method == 'DELETE':
-		return get_not_implemented_msg()
+		user = session.query(User).filter_by(id = id)
+		session.delete(user)
+		session.commit()
+		
 
-
+# @limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 @app.route('/api/v1/users/<int:id>', methods=['GET'])
 def process_user(id):
 	#TODO include his requests/dates/proposals etc
@@ -88,6 +123,8 @@ def process_user(id):
 	else:
 		return jsonify({'error': 'user does not exist'})
 
+# @limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 @app.route('/api/v1/requests', methods=['GET','POST'])
 def process_requests():
 	if request.method == 'GET':
@@ -111,7 +148,8 @@ def process_requests():
 		else:
 			return get_invalid_input_msg("meal_type, location_string, latitude, longitude, meal_time")
 
-
+# @limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 @app.route('/api/v1/requests/<int:id>', methods=['GET','PUT','DELETE'])
 def process_request():
 	if request.method == 'GET':
@@ -123,25 +161,42 @@ def process_request():
 	elif request.method == 'PUT':
 		return get_not_implemented_msg()
 	elif request.method == 'DELETE':
-		return get_not_implemented_msg()
+		req = session.query(Request).filter_by(rid = id)
+		session.delete(req)
+		session.commit()
 
+# @limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 @app.route('/api/v1/proposals', methods=['GET','POST'])
 def process_proposals():
 	if request.method == 'GET':
-		return get_not_implemented_msg()
-	elif request.method == 'POST':
+		req = session.query(Proposal).filter_by(pid = id).first()
+		if req:
+			return jsonify(req.serialize)
+		else:
+			return jsonify({'error': 'request does not exist'})
+	elif request.method =='POST':
 		return get_not_implemented_msg()
 
-
+# @limit.ratelimit(limit=2, per=10 * 1)	
+@require_token
 @app.route('/api/v1/proposals/<int:id>', methods=['GET','PUT','DELETE'])
 def process_proposal():
 	if request.method == 'GET':
-		return get_not_implemented_msg()
+		req = session.query(Proposal).filter_by(pid = id).first()
+		if req:
+			return jsonify(req.serialize)
+		else:
+			return jsonify({'error': 'request does not exist'})
 	elif request.method == 'PUT':
 		return get_not_implemented_msg()
 	elif request.method == 'DELETE':
-		return get_not_implemented_msg()
+		req = session.query(Proposal).filter_by(pid = id)
+		session.delete(req)
+		session.commit()
 
+# @limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 @app.route('/api/v1/dates', methods=['GET','POST'])
 def process_dates():
 	if request.method == 'GET':
@@ -149,15 +204,23 @@ def process_dates():
 	elif request.method == 'POST':
 		return get_not_implemented_msg()
 
-
+# @limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 @app.route('/api/v1/dates/<int:id>', methods=['GET','PUT','DELETE'])
 def process_date():
 	if request.method == 'GET':
-		return get_not_implemented_msg()
+		if request.method == 'GET':
+			req = session.query(MealDate).filter_by(id = id).first()
+			if req:
+				return jsonify(req.serialize)
+			else:
+				return jsonify({'error': 'request does not exist'})
 	elif request.method == 'PUT':
 		return get_not_implemented_msg()
 	elif request.method == 'DELETE':
-		return get_not_implemented_msg()
+		req = session.query(Proposal).filter_by(id = id)
+		session.delete(req)
+		session.commit()
 
 
 if __name__ == '__main__':
