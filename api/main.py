@@ -9,11 +9,19 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 import json, datetime, decimal
 
+import sys
+import codecs
+sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+sys.stderr = codecs.getwriter('utf8')(sys.stderr)
+
 
 session = get_db_session()
 
-app = Flask(__name__)
-
+app = Flask(__name__, static_url_path = "")
+#directs to the home page
+@app.route('/')
+def root():
+  return app.send_static_file("index.html")
 
 @app.after_request
 def inject_headers(response):
@@ -79,7 +87,7 @@ def login(provider):
 def logout(provider):
     return get_not_implemented_msg()
 
-@require_token
+#@require_token
 # @limit.ratelimit(limit=2, per=10 * 1)
 @app.route('/api/v1/users', methods=['GET','POST', 'PUT', 'DELETE'])
 def process_users():
