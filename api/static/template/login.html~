@@ -2,7 +2,7 @@
       <h1>Login</h1>
     <div class="col-md-6 col-md-offset-3">
 
-    <!-- taken and modified from http://jasonwatmore.com/post/2015/03/10/AngularJS-User-Registration-and-Login-Example.aspx -->
+    <!-- from http://jasonwatmore.com/post/2015/03/10/AngularJS-User-Registration-and-Login-Example.aspx -->
 
     <form name="form" ng-submit="vm.login()" role="form">
 

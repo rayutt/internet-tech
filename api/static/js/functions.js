@@ -73,7 +73,7 @@ app.factory('apiRepository', function($http) {
 
             // route for the user by id page
             .when('/users/:id', {
-                templateUrl : 'template/users.html',
+                templateUrl : 'template/usersid.html',
                 controller  : 'userControllerId'
             })
 
@@ -85,7 +85,7 @@ app.factory('apiRepository', function($http) {
 
             // route for the request by id page
             .when('/requests/:id', {
-                templateUrl : 'template/requests.html',
+                templateUrl : 'template/requestsid.html',
                 controller  : 'requestsControllerId'
             })
 
@@ -97,7 +97,7 @@ app.factory('apiRepository', function($http) {
 
               // route for the proposals page
             .when('/proposals/:id', {
-                templateUrl : 'template/proposals.html',
+                templateUrl : 'template/proposalsid.html',
                 controller  : 'proposalsControllerId'
             })
 
@@ -109,7 +109,7 @@ app.factory('apiRepository', function($http) {
 
               // route for the dates by id page
             .when('/dates:id', {
-                templateUrl : 'template/dates.html',
+                templateUrl : 'template/datesid.html',
                 controller  : 'datesControllerId'
             })
        
@@ -123,7 +123,7 @@ app.factory('apiRepository', function($http) {
     });
 
     app.controller('userController', function($scope) {
-        
+        $scope=apiRepository.getAll('users');
     });
 
      app.controller('userControllerId', function($scope) {
