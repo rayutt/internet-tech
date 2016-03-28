@@ -65,29 +65,54 @@ app.factory('apiRepository', function($http) {
                 controller  : 'loginController'
             })
 
-            // route for the user page
-            .when('api/v1/users', {
+            // route for the all users page
+            .when('/users', {
                 templateUrl : 'template/users.html',
                 controller  : 'userController'
             })
 
-            // route for the request page
-            .when('api/v1api/v1/requests', {
+            // route for the user by id page
+            .when('/users/:id', {
+                templateUrl : 'template/users.html',
+                controller  : 'userControllerId'
+            })
+
+            // route for the all requests page
+            .when('/requests', {
                 templateUrl : 'template/requests.html',
                 controller  : 'requestsController'
             })
 
-             // route for the proposals page
-            .when('api/v1/proposals', {
+            // route for the request by id page
+            .when('/requests/:id', {
+                templateUrl : 'template/requests.html',
+                controller  : 'requestsControllerId'
+            })
+
+             // route for the all proposals page
+            .when('/proposals', {
                 templateUrl : 'template/proposals.html',
                 controller  : 'proposalsController'
             })
 
-             // route for the dates page
-            .when('api/v1/dates', {
+              // route for the proposals page
+            .when('/proposals/:id', {
+                templateUrl : 'template/proposals.html',
+                controller  : 'proposalsControllerId'
+            })
+
+             // route for the all dates page
+            .when('/dates', {
                 templateUrl : 'template/dates.html',
                 controller  : 'datesController'
             })
+
+              // route for the dates by id page
+            .when('/dates:id', {
+                templateUrl : 'template/dates.html',
+                controller  : 'datesControllerId'
+            })
+       
        
     });
 
@@ -101,14 +126,31 @@ app.factory('apiRepository', function($http) {
         
     });
 
+     app.controller('userControllerId', function($scope) {
+        
+    });
+
     app.controller('requestsController', function($scope) {
         
     });
     
+    app.controller('requestsControllerId', function($scope) {
+        
+    });
+
     app.controller('proposalsController', function($scope) {
         
     });
 
+    app.controller('proposalsControllerId', function($scope) {
+        
+    });
 
 
+    app.controller('datesController', function($scope) {
+        
+    });
      
+    app.controller('datesIdController', function($scope) {
+        
+    });
