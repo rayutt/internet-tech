@@ -1,4 +1,4 @@
-var app = angular.module('main', []);
+var app = angular.module('main', ['ngRoute']);
 
 app.controller('myController', function($scope, apiRepository) {
     
@@ -52,5 +52,63 @@ app.factory('apiRepository', function($http) {
             return { success: false, message: error };
         };
     }
-});
 
+ });
+   // configure our routes
+    app.config(function($locationProvider, $routeProvider) {
+        $locationProvider.html5Mode(true);
+        $routeProvider
+
+            // route for the login page
+            .when('/', {
+                templateUrl : 'template/login.html',
+                controller  : 'loginController'
+            })
+
+            // route for the user page
+            .when('api/v1/users', {
+                templateUrl : 'template/users.html',
+                controller  : 'userController'
+            })
+
+            // route for the request page
+            .when('api/v1api/v1/requests', {
+                templateUrl : 'template/requests.html',
+                controller  : 'requestsController'
+            })
+
+             // route for the proposals page
+            .when('api/v1/proposals', {
+                templateUrl : 'template/proposals.html',
+                controller  : 'proposalsController'
+            })
+
+             // route for the dates page
+            .when('api/v1/dates', {
+                templateUrl : 'template/dates.html',
+                controller  : 'datesController'
+            })
+       
+    });
+
+    // create the controller and inject Angular's $scope
+    app.controller('loginController', function($scope) {
+        //if user is logged in drecect to main menu
+
+    });
+
+    app.controller('userController', function($scope) {
+        
+    });
+
+    app.controller('requestsController', function($scope) {
+        
+    });
+    
+    app.controller('proposalsController', function($scope) {
+        
+    });
+
+
+
+     
