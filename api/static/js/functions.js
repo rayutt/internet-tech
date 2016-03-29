@@ -8,6 +8,16 @@ $scope.lol = function() {
         console.log(apiRepository.getAll('users'));
         };
 
+
+$scope.submit = function() {
+    console.log($scope)
+    if ($scope.text) {
+        $scope.list.push(this.text);
+          scope.text = '';
+        }
+      };
+
+
 });
 
 
@@ -19,6 +29,7 @@ app.factory('apiRepository', function($http) {
     service.create = create;
     service.update = update;
     service.Delete = Delete;
+    service.authenticateUser = authenticateUser;
 
     return service;
 
@@ -52,6 +63,11 @@ app.factory('apiRepository', function($http) {
             return { success: false, message: error };
         };
     }
+
+    function authenticateUser(provider, email, password) {
+        return $http.post(host+provider+'/login', {'email' : email, 'password': password}).then(completed, errorMsg('Invalid credentials provided'));
+    }
+   
 
  });
    // configure our routes
