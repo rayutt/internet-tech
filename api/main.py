@@ -72,8 +72,8 @@ def login(provider):
 	elif provider == 'facebook':
 		return get_not_implemented_msg()
 	elif provider == 'app':
-		email = request.form['email']
-		password = request.form['password']
+		email = request.json['email']
+		password = request.json['password']
 		user = session.query(User).filter_by(email = email).first()
 
 		if user and User.verify_password(password, user.password_hash):
@@ -87,7 +87,7 @@ def login(provider):
 def logout(provider):
     return get_not_implemented_msg()
 
-#@require_token
+@require_token
 # @limit.ratelimit(limit=2, per=10 * 1)
 @app.route('/api/v1/users', methods=['GET','POST', 'PUT', 'DELETE'])
 def process_users():
@@ -95,8 +95,8 @@ def process_users():
 		users = session.query(User).all()
 		return jsonify(users = [u.serialize for u in users])
 	elif request.method == 'POST':
-		email = request.form['email']
-		password = request.form['password']
+		email = request.json['email']
+		password = request.json['password']
 
 		if(email and password and len(email) > 3 and len(password) > 3):
 			if(session.query(User).filter_by(email = email).first()):
@@ -140,11 +140,11 @@ def process_requests():
 		return jsonify(requests = [r.serialize for r in requests])
 	elif request.method == 'POST':
 		#TODO user id should not come from post form data (testing purposes) // meal_time from user instead of static
-		user_id = request.form['id']
-		meal_type = request.form['meal_type']
-		location_string = request.form['location_string']
-		latitude = request.form['latitude']
-		longitude = request.form['longitude']
+		user_id = request.json['id']
+		meal_type = request.json['meal_type']
+		location_string = request.json['location_string']
+		latitude = request.json['latitude']
+		longitude = request.json['longitude']
 		meal_time = datetime.datetime.utcnow()
 
 		if(user_id, meal_type, location_string, latitude, longitude, meal_time):

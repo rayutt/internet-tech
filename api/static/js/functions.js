@@ -1,25 +1,5 @@
 var app = angular.module('main', ['ngRoute']);
 
-app.controller('myController', function($scope, apiRepository) {
-    
-$scope.lol = function() {
-    console.log('works');
-        //apiRepository.getAll('users').success(function(users) {console.log(users)});
-        console.log(apiRepository.getAll('users'));
-        };
-
-
-$scope.submit = function() {
-    console.log($scope)
-    if ($scope.text) {
-        $scope.list.push(this.text);
-          scope.text = '';
-        }
-      };
-
-
-});
-
 
 app.factory('apiRepository', function($http) {
   var service = {};
@@ -64,14 +44,17 @@ app.factory('apiRepository', function($http) {
         };
     }
 
-    function authenticateUser(provider, email, password) {
-        return $http.post(host+provider+'/login', {'email' : email, 'password': password}).then(completed, errorMsg('Invalid credentials provided'));
+    function authenticateUser(provider, userObj) {
+        return $http.post(host+provider+'/login', userObj).then(completed, errorMsg('Invalid credentials provided'));
     }
    
 
  });
    // configure our routes
-    app.config(function($locationProvider, $routeProvider) {
+    app.config(function($locationProvider, $routeProvider, $httpProvider) {
+        
+        $httpProvider.interceptors.push('tokenInterceptor');
+
         $locationProvider.html5Mode(true);
         $routeProvider
 
@@ -132,17 +115,40 @@ app.factory('apiRepository', function($http) {
        
     });
 
-    // create the controller and inject Angular's $scope
-    app.controller('loginController', function($scope) {
-        //if user is logged in drecect to main menu
 
+  
+    // create the controller and inject Angular's $scope
+    app.controller('loginController', function($scope, apiRepository, $window) {
+        //if user is logged in drecect to main menu
+        $scope.submit = function() {
+        
+        // testing code
+        //console.log(apiRepository.authenticateUser('app',$scope.vm));
+
+        apiRepository.authenticateUser('app',$scope.vm).then(function (response) {
+            //prints api response
+                if(response && response.token){
+                    //stores the token
+                    $window.sessionStorage.accessToken = response.token;
+                }
+                else {
+                    //prints api login error
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+        
+      };
     });
 
     app.controller('userController', function($scope) {
+        
         $scope=apiRepository.getAll('users');
     });
 
-     app.controller('userControllerId', function($scope) {
+    app.controller('userControllerId', function($scope) {
         
     });
 
@@ -163,10 +169,21 @@ app.factory('apiRepository', function($http) {
     });
 
 
-    app.controller('datesController', function($scope) {
+    app.controller('datesController', function($scope, $window) {
         
     });
      
-    app.controller('datesIdController', function($scope) {
+    app.controller('datesIdController', function($scope, $window) {
         
     });
+
+    app.factory('tokenInterceptor', function ($window) {
+        return {
+         request: function (config) {
+         config.headers['Authorization'] = $window.sessionStorage.accessToken;
+
+            return config;
+    }
+  };
+});
+
