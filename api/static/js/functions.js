@@ -55,7 +55,7 @@ app.factory('apiRepository', function($http) {
         
         $httpProvider.interceptors.push('tokenInterceptor');
 
-        $locationProvider.html5Mode(true);
+        //$locationProvider.html5Mode(true);
         $routeProvider
 
             // route for the login page
@@ -112,6 +112,11 @@ app.factory('apiRepository', function($http) {
                 controller  : 'datesControllerId'
             })
        
+            // route for the main menu
+            .when('/mainmenu', {
+                templateUrl : 'template/mainmenu.html',
+                controller  : 'mainMenuController'
+            })
        
     });
 
@@ -130,6 +135,8 @@ app.factory('apiRepository', function($http) {
                 if(response && response.token){
                     //stores the token
                     $window.sessionStorage.accessToken = response.token;
+                    //redirects to a main menu after successful login
+                    $window.location.href = '#/mainMenu';
                 }
                 else {
                     //prints api login error
@@ -143,40 +150,101 @@ app.factory('apiRepository', function($http) {
       };
     });
 
-    app.controller('userController', function($scope) {
+    app.controller('userController', function($scope, apiRepository) {
         
-        $scope=apiRepository.getAll('users');
+        apiRepository.getAll('users').then(function (response) {
+            //prints api response
+                if(response){
+                    console.log(response.users);
+                    $scope.users = response.users;
+                }
+                else {
+                    //prints api error
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+        
+        console.log($scope);
     });
 
-    app.controller('userControllerId', function($scope) {
+    app.controller('userControllerId', function($scope, apiRepository) {
         
     });
 
-    app.controller('requestsController', function($scope) {
+    app.controller('requestsController', function($scope, apiRepository) {
+        apiRepository.getAll('requests').then(function (response) {
+            //prints api response
+                if(response){
+                    $scope.requests = response.requests;
+                    
+                }
+                else {
+                    //prints api error
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
         
     });
     
-    app.controller('requestsControllerId', function($scope) {
+    app.controller('requestsControllerId', function($scope, apiRepository) {
         
     });
 
-    app.controller('proposalsController', function($scope) {
+    app.controller('proposalsController', function($scope, apiRepository) {
+        apiRepository.getAll('proposals').then(function (response) {
+            //prints api response
+                if(response){
+                    $scope.proposals = response.proposals;
+                    
+                }
+                else {
+                    //prints api error
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
         
     });
 
-    app.controller('proposalsControllerId', function($scope) {
+    app.controller('proposalsControllerId', function($scope, apiRepository) {
         
     });
 
 
-    app.controller('datesController', function($scope, $window) {
+    app.controller('datesController', function($scope, apiRepository) {
+        apiRepository.getAll('dates').then(function (response) {
+            //prints api response
+                if(response){
+                    $scope.dates = response.dates;
+                    
+                }
+                else {
+                    //prints api error
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
         
     });
      
-    app.controller('datesIdController', function($scope, $window) {
+    app.controller('datesIdController', function($scope, apiRepository) {
         
     });
 
+    app.controller('mainMenuController', function($scope, apiRepository) {
+        
+    });
+    //stores the token in an intercept fucntion
     app.factory('tokenInterceptor', function ($window) {
         return {
          request: function (config) {

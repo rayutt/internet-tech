@@ -1,10 +1,15 @@
-<!-- -->
+<!-- list of memebers -->
 <div>
-<h1></h1>
+<h1>List of Proposals</h1>
 <div>
-
+	<table>
+	    <tr ng-repeat="x in proposals"> 
+	    <td><img src="{{x.picture}}" alt="user picture" height="42" width="42"> </td>
+	    <td>{{x.email}}</td>
+	    <td><a href='#/proposals:{{x.id}}'>see profile</a></td>
+	    </tr>
+</table>
 </div>
-
 
 
 </div>
