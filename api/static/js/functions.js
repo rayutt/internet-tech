@@ -17,7 +17,7 @@ app.factory('apiRepository', function($http) {
         return $http.get(host+endpoint).then(completed, errorMsg('Error getting all '+endpoint));
     }
 
-    function getById(id) {
+    function getById(endpoint, id) {
         return $http.get(host+ endpoint+'/'+ id).then(completed, errorMsg('Error getting '+endpoint+'by id'));
     }
 
@@ -71,7 +71,7 @@ app.factory('apiRepository', function($http) {
             })
 
             // route for the user by id page
-            .when('/users/:id', {
+            .when('/usersid/:id', {
                 templateUrl : 'template/usersid.html',
                 controller  : 'userControllerId'
             })
@@ -117,7 +117,12 @@ app.factory('apiRepository', function($http) {
                 templateUrl : 'template/mainmenu.html',
                 controller  : 'mainMenuController'
             })
-       
+            // route for the edit
+            .when('/edit', {
+                templateUrl : 'template/edit.html',
+                controller  : 'editController'
+            })
+
     });
 
 
@@ -170,8 +175,25 @@ app.factory('apiRepository', function($http) {
         console.log($scope);
     });
 
-    app.controller('userControllerId', function($scope, apiRepository) {
-        
+    app.controller('userControllerId', function($scope, apiRepository, $routeParams) {
+
+        apiRepository.getById('users',$routeParams.id).then(function (response) {
+            
+            //prints api response
+                if(response){
+                    $scope.user = response;
+                    console.log(response);
+                }
+                else {
+                    //prints api error
+                    console.log('Error connect to api');
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;   
+
     });
 
     app.controller('requestsController', function($scope, apiRepository) {
@@ -179,7 +201,6 @@ app.factory('apiRepository', function($http) {
             //prints api response
                 if(response){
                     $scope.requests = response.requests;
-                    
                 }
                 else {
                     //prints api error
@@ -192,16 +213,30 @@ app.factory('apiRepository', function($http) {
         
     });
     
-    app.controller('requestsControllerId', function($scope, apiRepository) {
-        
+    app.controller('requestsControllerId', function($scope, apiRepository, $routeParams) {
+        apiRepository.getById('requests',$routeParams.id).then(function (response) {
+            
+            //prints api response
+                if(response){
+                    $scope.requests = response;
+                    console.log(response);
+                }
+                else {
+                    //prints api error
+                    console.log('Error connect to api');
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
     });
 
     app.controller('proposalsController', function($scope, apiRepository) {
         apiRepository.getAll('proposals').then(function (response) {
             //prints api response
                 if(response){
-                    $scope.proposals = response.proposals;
-                    
+                    $scope.proposals = response.proposals;  
                 }
                 else {
                     //prints api error
@@ -214,8 +249,23 @@ app.factory('apiRepository', function($http) {
         
     });
 
-    app.controller('proposalsControllerId', function($scope, apiRepository) {
-        
+    app.controller('proposalsControllerId', function($scope, apiRepository, $routeParams) {
+        apiRepository.getById('proposals',$routeParams.id).then(function (response) {
+            
+            //prints api response
+                if(response){
+                    $scope.proposals = response;
+                    console.log(response);
+                }
+                else {
+                    //prints api error
+                    console.log('Error connect to api');
+
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
     });
 
 
@@ -224,7 +274,6 @@ app.factory('apiRepository', function($http) {
             //prints api response
                 if(response){
                     $scope.dates = response.dates;
-                    
                 }
                 else {
                     //prints api error
@@ -237,9 +286,28 @@ app.factory('apiRepository', function($http) {
         
     });
      
-    app.controller('datesIdController', function($scope, apiRepository) {
+    app.controller('datesIdController', function($scope, apiRepository, $routeParams) {
+        apiRepository.getById('users',$routeParams.id).then(function (response) {
+            
+            //prints api response
+                if(response){
+                    $scope.dates = response;
+                    console.log(response);
+                }
+                else {
+                    //prints api error
+                    console.log('Error connect to api');
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+    });
+
+    app.controller('editController', function($scope, apiRepository) {
         
     });
+
 
     app.controller('mainMenuController', function($scope, apiRepository) {
         
