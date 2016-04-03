@@ -88,6 +88,12 @@ app.factory('apiRepository', function($http) {
                 controller  : 'requestsControllerId'
             })
 
+            // route for the create request page
+            .when('/createrequest', {
+                templateUrl : 'template/createrequest.html',
+                controller  : 'createRequestController'
+            })
+
              // route for the all proposals page
             .when('/proposals', {
                 templateUrl : 'template/proposals.html',
@@ -100,10 +106,21 @@ app.factory('apiRepository', function($http) {
                 controller  : 'proposalsControllerId'
             })
 
+             .when('/createproposal', {
+                templateUrl : 'template/createproposal.html',
+                controller  : 'createProposalsController'
+            })
+
              // route for the all dates page
             .when('/dates', {
                 templateUrl : 'template/dates.html',
                 controller  : 'datesController'
+            })
+
+             // route for the all dates page
+            .when('/creatdates', {
+                templateUrl : 'template/createdate.html',
+                controller  : 'createDatesController'
             })
 
               // route for the dates by id page
@@ -141,7 +158,7 @@ app.factory('apiRepository', function($http) {
                     //stores the token
                     $window.sessionStorage.accessToken = response.token;
                     //redirects to a main menu after successful login
-                    $window.location.href = '#/mainMenu';
+                    $window.location.href = '#/mainmenu';
                 }
                 else {
                     //prints api login error
@@ -160,7 +177,7 @@ app.factory('apiRepository', function($http) {
         apiRepository.getAll('users').then(function (response) {
             //prints api response
                 if(response){
-                    console.log(response.users);
+                    //console.log(response.users);
                     $scope.users = response.users;
                 }
                 else {
@@ -193,7 +210,6 @@ app.factory('apiRepository', function($http) {
             //print error message if cant connect to api
             console.log(error)
         });;   
-
     });
 
     app.controller('requestsController', function($scope, apiRepository) {
@@ -212,6 +228,27 @@ app.factory('apiRepository', function($http) {
         });;
         
     });
+
+     // create the controller and inject Angular's $scope
+    app.controller('createRequestController', function($scope, apiRepository) {
+        
+        $scope.submit = function() {
+        console.log($scope.request);
+        apiRepository.create('requests',$scope.request).then(function (response) {
+            //prints api response
+                if(response){
+                    alert('success');
+                }
+                else {
+                    //prints api login error
+                    alert('fail');
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+    };
+    });
     
     app.controller('requestsControllerId', function($scope, apiRepository, $routeParams) {
         apiRepository.getById('requests',$routeParams.id).then(function (response) {
@@ -219,7 +256,7 @@ app.factory('apiRepository', function($http) {
             //prints api response
                 if(response){
                     $scope.requests = response;
-                    console.log(response);
+                    //console.log(response);
                 }
                 else {
                     //prints api error

@@ -41,7 +41,7 @@ class User(Base):
         return pwd_context.verify(password, hashed_password)
 
     @staticmethod
-    def generate_auth_token(id, expiration=600):
+    def generate_auth_token(id, expiration=6000):
         s = JSONWebSignatureSerializer(secret_key, expires_in = expiration)
         #convert to string
         return s.dumps({'id': id }).decode("utf-8")

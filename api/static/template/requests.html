@@ -2,14 +2,15 @@
 <div>
 <h1>List of Requests</h1>
 <div>
-	<table>
+	<table class="table table-striped">
+		<tr><th>Meal Type</th><th>Location</th><th>More info</th></tr>
 	    <tr ng-repeat="x in requests"> 
-	    <td><img src="{{x.picture}}" alt="user picture" height="42" width="42"> </td>
-	    <td>{{x.email}}</td>
-	    <td><a href='#/users:{{x.id}}'>see profile</a></td>
+	    <td>{{x.meal_type}} </td>
+	    <td>{{x.location_string}}</td>
+	    <td><a href='#/requests/{{x.id}}'>See more</a></td>
 	    </tr>
-</table>
-<h2 ng-hide="requests.length > 0">No Requests available</h2>
+	</table>
+
 </div>
 
 

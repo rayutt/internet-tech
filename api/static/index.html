@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="bower_components/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css" />
   <base href="/">
 </head>
 <body ng-app="main">
@@ -37,23 +38,12 @@
   
 <div class="container-fluid text-center">    
   <div class="row content">
-    <div class="col-sm-2 sidenav">
-      <p>Link</p>
-      <p>Link</p>
-      <p>Link</p>
-    </div>
+    
     
       <div ng-view></div>
       
     </div>
-    <div class="col-sm-2 sidenav">
-      <div class="well">
-        <p>ADS</p>
-      </div>
-      <div class="well">
-        <p>ADS</p>
-      </div>
-    </div>
+  
   </div>
 </div>
 
@@ -66,5 +56,7 @@
  	<!--<script src="bower_components/angular-ui/build/angular-ui.js"></script>-->
  	<script src="bower_components/angular-route/angular-route.js"></script>
   <script src="js/functions.js"></script>
+   <script type="text/javascript" src="bower_components/moment/min/moment.min.js"></script>
+  <script type="text/javascript" src="bower_components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
 </body>
 </html>

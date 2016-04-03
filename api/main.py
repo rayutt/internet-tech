@@ -2,31 +2,29 @@ import time
 from functools import update_wrapper
 from flask import request, g
 from flask import Flask, jsonify
+from map import Maps
+from forsq import forsqure
 import limit
 from model import Base, User, Request, Proposal, MealDate, get_db_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 import json, datetime, decimal
-
-import sys
-import codecs
-sys.stdout = codecs.getwriter('utf8')(sys.stdout)
-sys.stderr = codecs.getwriter('utf8')(sys.stderr)
+from functools import wraps
+from datetime import datetime
+from flask.ext.autodoc import Autodoc
 
 
 session = get_db_session()
 
 app = Flask(__name__, static_url_path = "")
-#directs to the home page
-@app.route('/')
-def root():
-  return app.send_static_file("index.html")
+auto = Autodoc(app)
 
 @app.after_request
 def inject_headers(response):
 	return limit.inject_x_rate_headers(response)
 
+#test code
 # @app.route('/rate-limited')
 # @limit.ratelimit(limit=2, per=10 * 1)
 # def index():
@@ -41,31 +39,34 @@ def get_invalid_input_msg(fields):
 
 #authenciates a user
 def require_token(func):
- def validate(*args, **kwargs):
-  token = request.headers.get('Authorization')
-  id = User.verify_auth_token(token) if token else None
-  if id:
-   g.user = id
-   return func(*args, **kwargs)
-  else:
-   return jsonify({'error': 'Invalid token'})
- return validate
+	@wraps(func)
+	def validate(*args, **kwargs):
+		print 'before token call'
+		token = request.headers.get('Authorization')
+		print token
+		id = User.verify_auth_token(token) if token else None
+		if id:
+			g.user = id
+			return func(*args, **kwargs)
+		else:
+			return jsonify({'error': 'Invalid token'})
+	return validate
 	
-#creates a user if the oauth is successful
-def create_user(answer):
-	answer.json()
-	name = data['name']
-	picture = data['picture']
-	email = data['email']
-	user = session.query(User).filter_by(email=email).first()
-	if not user:
-		user = User(username = name, picture = picture, email = email)
-		session.add(user)
-		session.commit()
-
 #START main
-# @limit.ratelimit(limit=2, per=10 * 1)
+
+#directs to the home page
+
+@app.route('/')
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+def root():
+  return app.send_static_file("index.html")
+
+
+
 @app.route('/api/v1/<provider>/login', methods=['POST'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
 def login(provider):
 	if provider == 'gmail':
 		return get_not_implemented_msg()
@@ -82,14 +83,19 @@ def login(provider):
 			#keep error message generic to avoid leaking info to attacker
 			return jsonify({'error': 'Invalid username and/or password'})
 
-# @limit.ratelimit(limit=2, per=10 * 1)
+
 @app.route('/api/v1/<provider>/logout', methods=['POST'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
 def logout(provider):
     return get_not_implemented_msg()
 
-@require_token
-# @limit.ratelimit(limit=2, per=10 * 1)
+
+
 @app.route('/api/v1/users', methods=['GET','POST', 'PUT', 'DELETE'])
+@auto.doc()
+@limit.ratelimit(limit=1, per=10 * 1)
+@require_token
 def process_users():
 	if request.method == 'GET':
 		users = session.query(User).all()
@@ -120,9 +126,11 @@ def process_users():
 		session.commit()
 		
 
-# @limit.ratelimit(limit=2, per=10 * 1)
-@require_token
+
 @app.route('/api/v1/users/<int:id>', methods=['GET'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 def process_user(id):
 	#TODO include his requests/dates/proposals etc
 	user = session.query(User).filter_by(id = id).first()
@@ -131,21 +139,25 @@ def process_user(id):
 	else:
 		return jsonify({'error': 'user does not exist'})
 
-# @limit.ratelimit(limit=2, per=10 * 1)
-@require_token
 @app.route('/api/v1/requests', methods=['GET','POST'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 def process_requests():
 	if request.method == 'GET':
 		requests = session.query(Request).all()
 		return jsonify(requests = [r.serialize for r in requests])
 	elif request.method == 'POST':
 		#TODO user id should not come from post form data (testing purposes) // meal_time from user instead of static
-		user_id = request.json['id']
+		user_id = g.user
 		meal_type = request.json['meal_type']
 		location_string = request.json['location_string']
-		latitude = request.json['latitude']
-		longitude = request.json['longitude']
-		meal_time = datetime.datetime.utcnow()
+		geoloc = Maps.getGeocodeLocation(location_string)
+		#output example
+		#{u'lat': 10.5168387, u'lng': -61.4114482}
+		latitude = geoloc['lat']
+		longitude = geoloc['lng']
+		meal_time = datetime.strptime(request.json['meal_time'], '%Y-%m-%d %H:%M:%S')
 
 		if(user_id, meal_type, location_string, latitude, longitude, meal_time):
 			newRequest = Request(user_id = user_id, meal_type = meal_type, location_string=location_string,
@@ -156,12 +168,13 @@ def process_requests():
 		else:
 			return get_invalid_input_msg("meal_type, location_string, latitude, longitude, meal_time")
 
-# @limit.ratelimit(limit=2, per=10 * 1)
-@require_token
 @app.route('/api/v1/requests/<int:id>', methods=['GET','PUT','DELETE'])
-def process_request():
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+@require_token
+def process_request(id):
 	if request.method == 'GET':
-		req = session.query(Request).filter_by(rid = id).first()
+		req = session.query(Request).filter_by(id = id).first()
 		if req:
 			return jsonify(req.serialize)
 		else:
@@ -169,13 +182,14 @@ def process_request():
 	elif request.method == 'PUT':
 		return get_not_implemented_msg()
 	elif request.method == 'DELETE':
-		req = session.query(Request).filter_by(rid = id)
+		req = session.query(Request).filter_by(id = id)
 		session.delete(req)
 		session.commit()
 
-# @limit.ratelimit(limit=2, per=10 * 1)
-@require_token
 @app.route('/api/v1/proposals', methods=['GET','POST'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 def process_proposals():
 	if request.method == 'GET':
 		req = session.query(Proposal).filter_by(pid = id).first()
@@ -184,11 +198,15 @@ def process_proposals():
 		else:
 			return jsonify({'error': 'request does not exist'})
 	elif request.method =='POST':
-		return get_not_implemented_msg()
+		user_from = g.user
+		requestid = request.json['request_id']
+		user_to = request.json['user_to']
 
-# @limit.ratelimit(limit=2, per=10 * 1)	
-@require_token
+	
 @app.route('/api/v1/proposals/<int:id>', methods=['GET','PUT','DELETE'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 def process_proposal():
 	if request.method == 'GET':
 		req = session.query(Proposal).filter_by(pid = id).first()
@@ -203,18 +221,22 @@ def process_proposal():
 		session.delete(req)
 		session.commit()
 
-# @limit.ratelimit(limit=2, per=10 * 1)
-@require_token
+
 @app.route('/api/v1/dates', methods=['GET','POST'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 def process_dates():
 	if request.method == 'GET':
 		return get_not_implemented_msg()
 	elif request.method == 'POST':
 		return get_not_implemented_msg()
 
-# @limit.ratelimit(limit=2, per=10 * 1)
-@require_token
+
 @app.route('/api/v1/dates/<int:id>', methods=['GET','PUT','DELETE'])
+@auto.doc()
+@limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 def process_date():
 	if request.method == 'GET':
 		if request.method == 'GET':
@@ -230,6 +252,9 @@ def process_date():
 		session.delete(req)
 		session.commit()
 
+@app.route('/documentation')
+def documentation():
+    return auto.html()
 
 if __name__ == '__main__':
 	app.secret_key = 'super_secret_key'
