@@ -8,7 +8,7 @@ import limit
 from model import Base, User, Request, Proposal, MealDate, get_db_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_
 import json, datetime, decimal
 from functools import wraps
 from datetime import datetime
@@ -63,7 +63,6 @@ def root():
   return app.send_static_file("index.html")
 
 
-
 @app.route('/api/v1/<provider>/login', methods=['POST'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
@@ -82,16 +81,14 @@ def login(provider):
 		else:
 			#keep error message generic to avoid leaking info to attacker
 			return jsonify({'error': 'Invalid username and/or password'})
-
-
+#
 @app.route('/api/v1/<provider>/logout', methods=['POST'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
 def logout(provider):
     return get_not_implemented_msg()
 
-
-
+#
 @app.route('/api/v1/users', methods=['GET','POST', 'PUT', 'DELETE'])
 @auto.doc()
 @limit.ratelimit(limit=1, per=10 * 1)
@@ -116,17 +113,19 @@ def process_users():
 		else:
 			return get_invalid_input_msg("email, password")
 	elif request.method == 'PUT':
-		#user = User.query(id)
-		#user.name = 'username'
-		#session.commit()
-		return get_not_implemented_msg()
+		user = User.query(id)
+		user.password_hash = request.json['password_hash']
+		user.picture = request.json['picture']
+		session.commit()
+		return jsonify({'success': 'update sucessful'})
+		
 	elif request.method == 'DELETE':
-		user = session.query(User).filter_by(id = id)
+		user = session.query(User).filter_by(id = g.user).first()
 		session.delete(user)
 		session.commit()
-		
+		return jsonify({'success': 'dalete sucessful'})
 
-
+#
 @app.route('/api/v1/users/<int:id>', methods=['GET'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
@@ -139,6 +138,7 @@ def process_user(id):
 	else:
 		return jsonify({'error': 'user does not exist'})
 
+#
 @app.route('/api/v1/requests', methods=['GET','POST'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
@@ -148,17 +148,17 @@ def process_requests():
 		requests = session.query(Request).all()
 		return jsonify(requests = [r.serialize for r in requests])
 	elif request.method == 'POST':
-		#TODO user id should not come from post form data (testing purposes) // meal_time from user instead of static
 		user_id = g.user
 		meal_type = request.json['meal_type']
 		location_string = request.json['location_string']
 		geoloc = Maps.getGeocodeLocation(location_string)
-		#output example
+		#output example from maps api
 		#{u'lat': 10.5168387, u'lng': -61.4114482}
 		latitude = geoloc['lat']
 		longitude = geoloc['lng']
+		#converts the json date into python date
 		meal_time = datetime.strptime(request.json['meal_time'], '%Y-%m-%d %H:%M:%S')
-
+		#creates a new request
 		if(user_id, meal_type, location_string, latitude, longitude, meal_time):
 			newRequest = Request(user_id = user_id, meal_type = meal_type, location_string=location_string,
 							  latitude=latitude,longitude=longitude, meal_time=meal_time)
@@ -168,6 +168,7 @@ def process_requests():
 		else:
 			return get_invalid_input_msg("meal_type, location_string, latitude, longitude, meal_time")
 
+#
 @app.route('/api/v1/requests/<int:id>', methods=['GET','PUT','DELETE'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
@@ -180,59 +181,98 @@ def process_request(id):
 		else:
 			return jsonify({'error': 'request does not exist'})
 	elif request.method == 'PUT':
-		return get_not_implemented_msg()
+		req = session.query(Request).filter_by(id = id, user_id=g.user).first()
+		req.meal_type = request.json['meal_type']
+		req.location_string = request.json['location_string']
+		geoloc = Maps.getGeocodeLocation(req.location_string)
+		#output example from maps api
+		#{u'lat': 10.5168387, u'lng': -61.4114482}
+		req.latitude = geoloc['lat']
+		req.longitude = geoloc['lng']
+		#converts the json date into python date
+		req.meal_time = datetime.strptime(request.json['meal_time'], '%Y-%m-%d %H:%M:%S')
+		session.commit()
+		return jsonify({'success': 'update sucessful'})
 	elif request.method == 'DELETE':
-		req = session.query(Request).filter_by(id = id)
+		req = session.query(Request).filter_by(id = id, user_id=g.user).first()
 		session.delete(req)
 		session.commit()
-
+		return jsonify({'success': 'dalete sucessful'})
+#
 @app.route('/api/v1/proposals', methods=['GET','POST'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
 @require_token
 def process_proposals():
 	if request.method == 'GET':
-		req = session.query(Proposal).filter_by(pid = id).first()
-		if req:
-			return jsonify(req.serialize)
-		else:
-			return jsonify({'error': 'request does not exist'})
+		proposals = session.query(Proposal).all()
+		return jsonify(proposals = [p.serialize for p in proposals])
+		
 	elif request.method =='POST':
-		user_from = g.user
-		requestid = request.json['request_id']
-		user_to = request.json['user_to']
+		user_proposed_from = g.user
+		request_id = request.json['request_id']
+		user_proposed_to = request.json['user_proposed_to']
+		if(user_proposed_from, request_id, user_proposed_to):
+			newProposal = Proposal(user_proposed_from = user_proposed_from, user_proposed_to=user_proposed_to, request_id=request_id)
+			session.add(newProposal)
+			session.commit()
+			return jsonify(newProposal.serialize)
+		else:
+			return get_invalid_input_msg("user_proposed_from, request_id, user_proposed_to")
 
-	
+#	
 @app.route('/api/v1/proposals/<int:id>', methods=['GET','PUT','DELETE'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
 @require_token
-def process_proposal():
+def process_proposal(id):
 	if request.method == 'GET':
-		req = session.query(Proposal).filter_by(pid = id).first()
+		req = session.query(Proposal).filter_by(id = id).first()
 		if req:
 			return jsonify(req.serialize)
 		else:
-			return jsonify({'error': 'request does not exist'})
+			return jsonify({'error': 'proposal does not exist'})
 	elif request.method == 'PUT':
-		return get_not_implemented_msg()
-	elif request.method == 'DELETE':
-		req = session.query(Proposal).filter_by(pid = id)
-		session.delete(req)
+		req = session.query(Proposal).filter_by(pid = id, user_proposed_to=g.user).first()
+		req.filled = request.json['filled']
 		session.commit()
+		return jsonify({'success': 'update sucessful'})
+	elif request.method == 'DELETE':
+		#and or require for sql
+		prop = session.query(Proposal).filter_by(id = id).first()
+		session.delete(prop)
+		session.commit()
+		return jsonify({'success': 'dalete sucessful'})
 
-
+#
 @app.route('/api/v1/dates', methods=['GET','POST'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
 @require_token
 def process_dates():
 	if request.method == 'GET':
-		return get_not_implemented_msg()
+		dates = session.query(MealDate).filter(or_(MealDate.user_2==g.user, MealDate.user_2==g.user))
+		return jsonify(dates = [d.serialize for d in dates])
+		
 	elif request.method == 'POST':
-		return get_not_implemented_msg()
-
-
+		user_2 = g.user
+		request_id = request.json['request_id']
+		user_1 = request.json['user_1']
+		meal_time = request.json['meal_time']
+		req = session.query(Request).filter_by(id = request_id).first()
+		meal_type=req.meal_type
+		restaurant=forsqure.findAResturant(req.meal_type, req.location_string)
+		restaurant_name = restaurant['name']
+		restaurant_address = restaurant['address']
+		restaurant_picture = restaurant['image']
+		if(user_2,user_1,meal_time,restaurant_name,restaurant_address,restaurant_picture):
+			newMealDate = MealDate(user_2 = user_2, user_1=user_1, restaurant_name=restaurant_name, restaurant_address=restaurant_address, restaurant_picture=restaurant_picture)
+			session.add(newMealDate)
+			session.commit()
+			return jsonify(newMealDate.serialize)
+		else:
+			return get_invalid_input_msg("user_2,user_1,meal_time,restaurant_name,restaurant_address,restaurant_picture")
+#
 @app.route('/api/v1/dates/<int:id>', methods=['GET','PUT','DELETE'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
@@ -244,14 +284,16 @@ def process_date():
 			if req:
 				return jsonify(req.serialize)
 			else:
-				return jsonify({'error': 'request does not exist'})
+				return jsonify({'error': 'date does not exist'})
 	elif request.method == 'PUT':
 		return get_not_implemented_msg()
 	elif request.method == 'DELETE':
-		req = session.query(Proposal).filter_by(id = id)
+		req = session.query(MealDate).filter_by(id = id).first()
 		session.delete(req)
 		session.commit()
+		return jsonify({'success': 'dalete sucessful'})
 
+#creates documentation
 @app.route('/documentation')
 def documentation():
     return auto.html()

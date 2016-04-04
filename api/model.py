@@ -101,7 +101,6 @@ class Proposal(Base):
             'id' : self.id,
             'user_proposed_to' : self.user_proposed_to,
             'user_proposed_from' : self.user_proposed_from,
-            'location_string' : self.location_string,
             'request_id' : self.request_id,
             'filled' : self.filled
         }
@@ -112,6 +111,7 @@ class MealDate(Base):
     id = Column(Integer, primary_key=True)
     user_1 = Column(Integer, ForeignKey('user.id'))
     user_2 = Column(Integer, ForeignKey('user.id'))
+    
     restaurant_name = Column(String(100))
     restaurant_address = Column(String)
     restaurant_picture = Column(String)

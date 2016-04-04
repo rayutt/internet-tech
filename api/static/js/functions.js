@@ -94,6 +94,12 @@ app.factory('apiRepository', function($http) {
                 controller  : 'createRequestController'
             })
 
+              // route for the edit request page
+            .when('/editrequest/:id', {
+                templateUrl : 'template/editrequest.html',
+                controller  : 'editRequestController'
+            })
+
              // route for the all proposals page
             .when('/proposals', {
                 templateUrl : 'template/proposals.html',
@@ -249,6 +255,62 @@ app.factory('apiRepository', function($http) {
         });;
     };
     });
+
+     // create the controller and inject Angular's $scope
+    app.controller('editRequestController', function($scope, apiRepository, $routeParams) {
+        
+        apiRepository.getById('requests',$routeParams.id).then(function (response) {
+                    
+                    //prints api response
+                        if(response){
+                            $scope.request = response;
+                            console.log(response);
+                        }
+                        else {
+                            //prints api error
+                            console.log('Error connect to api');
+                        }
+                    }, function (error) {
+                    //print error message if cant connect to api
+                    console.log(error)
+                });;   
+
+
+    $scope.Delete = function() {
+        console.log('delete');
+        apiRepository.Delete('requests',$routeParams.id).then(function (response) {
+            console.log('delete');
+                if(response){
+                    alert('success request deleted');
+                }
+                else {
+                    //prints api login error
+                    alert('fail');
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+    };
+
+     $scope.submit = function() {
+        console.log($scope.request);
+        apiRepository.update('requests',$scope.request).then(function (response) {
+            //prints api response
+                if(response){
+                    alert('success');
+                }
+                else {
+                    //prints api login error
+                    alert('fail');
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+    };
+
+    });
     
     app.controller('requestsControllerId', function($scope, apiRepository, $routeParams) {
         apiRepository.getById('requests',$routeParams.id).then(function (response) {
@@ -267,6 +329,29 @@ app.factory('apiRepository', function($http) {
             //print error message if cant connect to api
             console.log(error)
         });;
+
+         $scope.createProposal = function() {
+                console.log('proposals');
+                var proposal ={
+                                "user_proposed_to":$scope.requests.user_id,
+                                "request_id":$scope.requests.id
+                            }
+                
+                apiRepository.create('proposals', proposal).then(function (response) {
+                    console.log('proposals');
+                        if(response){
+                            alert('success proposal created');
+                        }
+                        else {
+                            //prints api login error
+                            alert('fail');
+                        }
+                    }, function (error) {
+                    //print error message if cant connect to api
+                    console.log(error)
+                });;
+            };
+
     });
 
     app.controller('proposalsController', function($scope, apiRepository) {
@@ -292,6 +377,7 @@ app.factory('apiRepository', function($http) {
             //prints api response
                 if(response){
                     $scope.proposals = response;
+                    $scope.getRequest();
                     console.log(response);
                 }
                 else {
@@ -303,6 +389,66 @@ app.factory('apiRepository', function($http) {
             //print error message if cant connect to api
             console.log(error)
         });;
+
+             $scope.getRequest = function() {
+                console.log('request');
+            
+                apiRepository.getById('requests', $scope.proposals.request_id).then(function (response) {
+                    console.log('request');
+                        if(response){
+                            $scope.requests = response;
+                            console.log(response);
+                        }
+                        else {
+                            //prints api login error
+                            alert('fail');
+                        }
+                    }, function (error) {
+                    //print error message if cant connect to api
+                    console.log(error)
+                });;
+            };
+
+    $scope.Delete = function() {
+        console.log('delete');
+        apiRepository.Delete('proposals',$routeParams.id).then(function (response) {
+            console.log('delete');
+                if(response){
+                    alert('success proposal deleted');
+                }
+                else {
+                    //prints api login error
+                    alert('fail');
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+    };
+
+    $scope.accept = function() {
+                console.log('dates');
+                var MealDate ={
+                                "user_1":$scope.proposals.user_proposed_to,
+                                "request_id":$scope.requests.id,
+                                "meal_time": $scope.requests.meal_time
+                            }
+                
+                apiRepository.create('dates', MealDate).then(function (response) {
+                    console.log('proposals');
+                        if(response){
+                            alert('success meal date created');
+                        }
+                        else {
+                            //prints api login error
+                            alert('fail');
+                        }
+                    }, function (error) {
+                    //print error message if cant connect to api
+                    console.log(error)
+                });;
+            };
+
     });
 
 
@@ -310,7 +456,8 @@ app.factory('apiRepository', function($http) {
         apiRepository.getAll('dates').then(function (response) {
             //prints api response
                 if(response){
-                    $scope.dates = response.dates;
+                    console.log(response);
+                    $scope.MealDate = response;
                 }
                 else {
                     //prints api error
