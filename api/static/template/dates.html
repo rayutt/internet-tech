@@ -1,12 +1,13 @@
-<!-- list of memebers -->
+<!-- list of dates -->
 <div>
 <h1>List of Dates</h1>
 <div>
-	<table>
+	<table class="table table-striped">
 	    <tr ng-repeat="x in dates"> 
-	    <td><img src="{{x}}" alt="user picture" height="42" width="42"> </td>
-	    <td>{{x}}</td>
-	    <td><a href='#/dates:{{x.id}}'>see profile</a></td>
+	    <td><img src="{{x.restaurant_picture}}" alt="restuarant picture" height="42" width="42"> </td>
+	    <td>{{x.restaurant_name}}</td>
+	   
+	    <td><a href='#/dates/{{x.id}}'>More Info</a></td>
 	    </tr>
 </table>
 </div>

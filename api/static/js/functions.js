@@ -18,7 +18,7 @@ app.factory('apiRepository', function($http) {
     }
 
     function getById(endpoint, id) {
-        return $http.get(host+ endpoint+'/'+ id).then(completed, errorMsg('Error getting '+endpoint+'by id'));
+        return $http.get(host+ endpoint+'/'+ id).then(completed, errorMsg('Error getting '+endpoint+' by id'));
     }
 
     function create(endpoint,obj) {
@@ -130,7 +130,7 @@ app.factory('apiRepository', function($http) {
             })
 
               // route for the dates by id page
-            .when('/dates:id', {
+            .when('/dates/:id', {
                 templateUrl : 'template/datesid.html',
                 controller  : 'datesControllerId'
             })
@@ -140,11 +140,18 @@ app.factory('apiRepository', function($http) {
                 templateUrl : 'template/mainmenu.html',
                 controller  : 'mainMenuController'
             })
-            // route for the edit
+            // route for the edit user
             .when('/edit', {
                 templateUrl : 'template/edit.html',
                 controller  : 'editController'
             })
+
+             // route for the edit date
+            .when('/editdate/:id', {
+                templateUrl : 'template/editdate.html',
+                controller  : 'editDateController'
+            })
+
 
     });
 
@@ -182,7 +189,7 @@ app.factory('apiRepository', function($http) {
         
         apiRepository.getAll('users').then(function (response) {
             //prints api response
-                if(response){
+                if(response && !response.error){
                     //console.log(response.users);
                     $scope.users = response.users;
                 }
@@ -203,13 +210,13 @@ app.factory('apiRepository', function($http) {
         apiRepository.getById('users',$routeParams.id).then(function (response) {
             
             //prints api response
-                if(response){
+                if(response && !response.error){
                     $scope.user = response;
                     console.log(response);
                 }
                 else {
                     //prints api error
-                    console.log('Error connect to api');
+                    console.log('Error connecting to api');
 
                 }
             }, function (error) {
@@ -221,7 +228,7 @@ app.factory('apiRepository', function($http) {
     app.controller('requestsController', function($scope, apiRepository) {
         apiRepository.getAll('requests').then(function (response) {
             //prints api response
-                if(response){
+                if(response && !response.error){
                     $scope.requests = response.requests;
                 }
                 else {
@@ -242,12 +249,12 @@ app.factory('apiRepository', function($http) {
         console.log($scope.request);
         apiRepository.create('requests',$scope.request).then(function (response) {
             //prints api response
-                if(response){
-                    alert('success');
+                if(response && !response.error){
+                    //moment("Thu, 17 Mar 2016 01:06:01 GMT", "ddd, DD MMM YYYY HH:mm:ss").format("YYYY-MM-DD HH:mm:ss");
                 }
                 else {
                     //prints api login error
-                    alert('fail');
+                    
                 }
             }, function (error) {
             //print error message if cant connect to api
@@ -262,7 +269,7 @@ app.factory('apiRepository', function($http) {
         apiRepository.getById('requests',$routeParams.id).then(function (response) {
                     
                     //prints api response
-                        if(response){
+                        if(response && !response.error){
                             $scope.request = response;
                             console.log(response);
                         }
@@ -280,12 +287,12 @@ app.factory('apiRepository', function($http) {
         console.log('delete');
         apiRepository.Delete('requests',$routeParams.id).then(function (response) {
             console.log('delete');
-                if(response){
-                    alert('success request deleted');
+                if(response && !response.error){
+                    
                 }
                 else {
                     //prints api login error
-                    alert('fail');
+                    
                 }
             }, function (error) {
             //print error message if cant connect to api
@@ -294,10 +301,12 @@ app.factory('apiRepository', function($http) {
     };
 
      $scope.submit = function() {
+        console.log('before requeswt')
         console.log($scope.request);
+        //$scope.request.meal_time=moment($scope.request.meal_time, "ddd, DD MMM YYYY HH:mm:ss").format("YYYY-MM-DD HH:mm:ss");
         apiRepository.update('requests',$scope.request).then(function (response) {
             //prints api response
-                if(response){
+                if(response && !response.error){
                     alert('success');
                 }
                 else {
@@ -316,7 +325,7 @@ app.factory('apiRepository', function($http) {
         apiRepository.getById('requests',$routeParams.id).then(function (response) {
             
             //prints api response
-                if(response){
+                if(response && !response.error){
                     $scope.requests = response;
                     //console.log(response);
                 }
@@ -339,7 +348,7 @@ app.factory('apiRepository', function($http) {
                 
                 apiRepository.create('proposals', proposal).then(function (response) {
                     console.log('proposals');
-                        if(response){
+                        if(response && !response.error){
                             alert('success proposal created');
                         }
                         else {
@@ -357,7 +366,7 @@ app.factory('apiRepository', function($http) {
     app.controller('proposalsController', function($scope, apiRepository) {
         apiRepository.getAll('proposals').then(function (response) {
             //prints api response
-                if(response){
+                if(response && !response.error){
                     $scope.proposals = response.proposals;  
                 }
                 else {
@@ -375,14 +384,14 @@ app.factory('apiRepository', function($http) {
         apiRepository.getById('proposals',$routeParams.id).then(function (response) {
             
             //prints api response
-                if(response){
+                if(response&& !response.error){
                     $scope.proposals = response;
                     $scope.getRequest();
                     console.log(response);
                 }
                 else {
                     //prints api error
-                    console.log('Error connect to api');
+                    console.log('Error connecting to api');
 
                 }
             }, function (error) {
@@ -395,7 +404,7 @@ app.factory('apiRepository', function($http) {
             
                 apiRepository.getById('requests', $scope.proposals.request_id).then(function (response) {
                     console.log('request');
-                        if(response){
+                        if(response && !response.error){
                             $scope.requests = response;
                             console.log(response);
                         }
@@ -413,7 +422,7 @@ app.factory('apiRepository', function($http) {
         console.log('delete');
         apiRepository.Delete('proposals',$routeParams.id).then(function (response) {
             console.log('delete');
-                if(response){
+                if(response && !response.error){
                     alert('success proposal deleted');
                 }
                 else {
@@ -455,9 +464,9 @@ app.factory('apiRepository', function($http) {
     app.controller('datesController', function($scope, apiRepository) {
         apiRepository.getAll('dates').then(function (response) {
             //prints api response
-                if(response){
+                if(response && !response.error){
                     console.log(response);
-                    $scope.MealDate = response;
+                    $scope.dates = response.dates;
                 }
                 else {
                     //prints api error
@@ -470,11 +479,50 @@ app.factory('apiRepository', function($http) {
         
     });
      
-    app.controller('datesIdController', function($scope, apiRepository, $routeParams) {
-        apiRepository.getById('users',$routeParams.id).then(function (response) {
+    app.controller('datesControllerId', function($scope, apiRepository, $routeParams) {
+        apiRepository.getById('dates', $routeParams.id).then(function (response) {
             
             //prints api response
-                if(response){
+                if(response && !response.error){
+                    $scope.dates = response;
+                    console.log(response);
+                }
+                else {
+                    //prints api error
+                    console.log('Error connect to api');
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+
+        $scope.Delete = function() {
+        console.log('delete');
+        apiRepository.Delete('dates',$routeParams.id).then(function (response) {
+            console.log('delete');
+                if(response && !response.error){
+                    alert('success date deleted');
+                }
+                else {
+                    //prints api login error
+                    alert('fail');
+                }
+            }, function (error) {
+            //print error message if cant connect to api
+            console.log(error)
+        });;
+    };
+
+    });
+
+    
+
+    app.controller('editDateController', function($scope, apiRepository, $routeParams) {
+        
+        apiRepository.getById('dates', $routeParams.id).then(function (response) {
+            
+            //prints api response
+                if(response && !response.error){
                     $scope.dates = response;
                     console.log(response);
                 }
@@ -496,14 +544,41 @@ app.factory('apiRepository', function($http) {
     app.controller('mainMenuController', function($scope, apiRepository) {
         
     });
-    //stores the token in an intercept fucntion
-    app.factory('tokenInterceptor', function ($window) {
-        return {
-         request: function (config) {
-         config.headers['Authorization'] = $window.sessionStorage.accessToken;
 
-            return config;
-    }
-  };
+    app.factory('tokenInterceptor', function ($location, $q, $window, $rootScope) {
+ return {
+ request: function (config) {
+  config.headers['Authorization'] = $window.sessionStorage.accessToken;
+  return config;
+ },
+ 'requestError': function(rejection) {
+  console.log(rejection)
+  if (canRecover(rejection)) {
+   return responseOrNewPromise
+  }
+  return $q.reject(rejection);
+ },
+ 'response': function(response) {
+  if(response && response.data.error){
+   if(response.data.redirect){
+    $location.path(response.data.redirect);
+   }
+   console.log(response.data.error)
+   $rootScope.errorMsg = response.data.error;
+  }
+  return response;
+ },
+ 'responseError': function(rejection) {
+  console.log(rejection)
+  if (canRecover(rejection)) {
+   return responseOrNewPromise
+  }
+  return $q.reject(rejection);
+ }
+ };
 });
+
+
+
+    //function logout($scope){}
 

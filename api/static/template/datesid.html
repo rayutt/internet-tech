@@ -1,10 +1,24 @@
-<!-- -->
+<!-- date info page-->
 <div>
-<h1></h1>
+<h1>Date Info</h1>
 <div>
-
+	<table class="table table-striped">
+	     
+	    <tr><td></td><td><img src="{{dates.restaurant_picture}}" alt="restuarant picture" height="100" width="100"> </td></tr>
+	    <tr><td>Restaurant Name</td><td>{{dates.restaurant_name}}</td></tr>
+	    <tr><td>Restaurant Address</td><td>{{dates.restaurant_address}}</td></tr></tr>
+	    <tr><td>Person 1</td><td><a href='#/usersid/{{dates.user_1}}'>see profile</a></td></tr>
+	    <tr><td>Person 2</td><td><a href='#/usersid/{{dates.user_2}}'>see profile</a></td></tr>
+	    <tr>
+		    <td>
+		    	<a href='#/editdate/{{dates.id}}'>Edit</a>
+		    </td>
+		    <td>
+		    	<button ng-click='Delete()'>Delete</button>
+		    </td>
+	    </tr>
+</table>
 </div>
-
 
 
 </div>

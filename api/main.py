@@ -1,19 +1,19 @@
 import time
 from functools import update_wrapper
-from flask import request, g
-from flask import Flask, jsonify
+from flask import Flask, jsonify, make_response, request, g
 from map import Maps
 from forsq import forsqure
 import limit
 from model import Base, User, Request, Proposal, MealDate, get_db_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy import create_engine, or_
+from sqlalchemy import create_engine, or_, and_
 import json, datetime, decimal
 from functools import wraps
 from datetime import datetime
 from flask.ext.autodoc import Autodoc
-
+import requests
+from redis import Redis
 
 session = get_db_session()
 
@@ -44,12 +44,16 @@ def require_token(func):
 		print 'before token call'
 		token = request.headers.get('Authorization')
 		print token
-		id = User.verify_auth_token(token) if token else None
-		if id:
-			g.user = id
+		data = User.verify_auth_token(token) if token else None
+		print data
+		if data:
+			g.user = data[0]['id']
+			print g.user
+			g.token = token
+			g.token_expire = data[1]['exp']
 			return func(*args, **kwargs)
 		else:
-			return jsonify({'error': 'Invalid token'})
+			return jsonify({'error': 'Invalid token', 'redirect' : '/' })
 	return validate
 	
 #START main
@@ -68,7 +72,55 @@ def root():
 @limit.ratelimit(limit=2, per=10 * 1)
 def login(provider):
 	if provider == 'gmail':
-		return get_not_implemented_msg()
+		#STEP 1 - Parse the auth code
+	    auth_code = request.json.get('auth_code')
+	    print "Step 1 - Complete, received auth code %s" % auth_code
+	    if provider == 'google':
+	        #STEP 2 - Exchange for a token
+	        try:
+	            # Upgrade the authorization code into a credentials object
+	            oauth_flow = flow_from_clientsecrets('client_secrets.json', scope='')
+	            oauth_flow.redirect_uri = 'postmessage'
+	            credentials = oauth_flow.step2_exchange(auth_code)
+	        except FlowExchangeError:
+	            response = make_response(json.dumps('Failed to upgrade the authorization code.'), 401)
+	            response.headers['Content-Type'] = 'application/json'
+	            return response
+	          
+	        # Check that the access token is valid.
+	        access_token = credentials.access_token
+	        url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' % access_token)
+	        h = httplib2.Http()
+	        result = json.loads(h.request(url, 'GET')[1])
+	        # If there was an error in the access token info, abort.
+	        if result.get('error') is not None:
+	            response = make_response(json.dumps(result.get('error')), 500)
+	            response.headers['Content-Type'] = 'application/json'
+	        print "Step 2 Complete! Access Token : %s " % credentials.access_token
+
+	        #STEP 3 - Find User or make a new one
+	        
+	        #Get user info
+	        h = httplib2.Http()
+	        userinfo_url =  "https://www.googleapis.com/oauth2/v1/userinfo"
+	        params = {'access_token': credentials.access_token, 'alt':'json'}
+	        answer = requests.get(userinfo_url, params=params)
+	      
+	        data = answer.json()
+
+	        name = data['name']
+	        picture = data['picture']
+	        email = data['email']
+        	user = session.query(User).filter_by(email = email).first()
+        
+	        #see if user exists, if it doesn't make a new one
+	        user = session.query(User).filter_by(email=email).first()
+	        if not user:
+	            user = User(username = name, picture = picture, email = email)
+	            session.add(user)
+	            session.commit()
+	        
+
 	elif provider == 'facebook':
 		return get_not_implemented_msg()
 	elif provider == 'app':
@@ -81,18 +133,30 @@ def login(provider):
 		else:
 			#keep error message generic to avoid leaking info to attacker
 			return jsonify({'error': 'Invalid username and/or password'})
-#
+
+#token is sent via the header
 @app.route('/api/v1/<provider>/logout', methods=['POST'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
+@require_token
 def logout(provider):
-    return get_not_implemented_msg()
+	#redis calls should be move to a singliton design
+	redis = Redis()
+	token = request.headers.get('Authorization')
+	data = User.verify_auth_token(token)
+	p = redis.pipeline()
+	p.incr(token) # increments key
+	p.expireat(token, data[1]['exp']) # expires based on the reset value
+	results = p.execute()
+	if results[0] >= 1 and results[1] == True:
+		return jsonify({'data': 'Successfully logged out'})
+	else:
+		return jsonify({'error': 'Error logging out'})
 
 #
 @app.route('/api/v1/users', methods=['GET','POST', 'PUT', 'DELETE'])
 @auto.doc()
 @limit.ratelimit(limit=1, per=10 * 1)
-@require_token
 def process_users():
 	if request.method == 'GET':
 		users = session.query(User).all()
@@ -181,23 +245,29 @@ def process_request(id):
 		else:
 			return jsonify({'error': 'request does not exist'})
 	elif request.method == 'PUT':
-		req = session.query(Request).filter_by(id = id, user_id=g.user).first()
-		req.meal_type = request.json['meal_type']
-		req.location_string = request.json['location_string']
-		geoloc = Maps.getGeocodeLocation(req.location_string)
-		#output example from maps api
-		#{u'lat': 10.5168387, u'lng': -61.4114482}
-		req.latitude = geoloc['lat']
-		req.longitude = geoloc['lng']
-		#converts the json date into python date
-		req.meal_time = datetime.strptime(request.json['meal_time'], '%Y-%m-%d %H:%M:%S')
-		session.commit()
-		return jsonify({'success': 'update sucessful'})
+		req = session.query(Request).filter_by(id = id).first()
+		if req:
+			req.meal_type = request.json['meal_type']
+			req.location_string = request.json['location_string']
+			geoloc = Maps.getGeocodeLocation(req.location_string)
+			#output example from maps api
+			#{u'lat': 10.5168387, u'lng': -61.4114482}
+			req.latitude = geoloc['lat']
+			req.longitude = geoloc['lng']
+			#converts the json date into python date
+			req.meal_time = datetime.strptime(request.json['meal_time'], '%Y-%m-%d %H:%M:%S')
+			session.commit()
+			return jsonify({'success': 'update sucessful'})
+		else:
+			return jsonify({'error': 'update failed'})
 	elif request.method == 'DELETE':
 		req = session.query(Request).filter_by(id = id, user_id=g.user).first()
-		session.delete(req)
-		session.commit()
-		return jsonify({'success': 'dalete sucessful'})
+		if req:
+			session.delete(req)
+			session.commit()
+			return jsonify({'success': 'delete sucessful'})
+		else:
+			return jsonify({'error': 'fail sucessful'})
 #
 @app.route('/api/v1/proposals', methods=['GET','POST'])
 @auto.doc()
@@ -277,7 +347,7 @@ def process_dates():
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
 @require_token
-def process_date():
+def process_date(id):
 	if request.method == 'GET':
 		if request.method == 'GET':
 			req = session.query(MealDate).filter_by(id = id).first()
@@ -288,10 +358,13 @@ def process_date():
 	elif request.method == 'PUT':
 		return get_not_implemented_msg()
 	elif request.method == 'DELETE':
-		req = session.query(MealDate).filter_by(id = id).first()
-		session.delete(req)
-		session.commit()
-		return jsonify({'success': 'dalete sucessful'})
+		req = session.query(MealDate).filter(and_(MealDate.id == id, (or_(MealDate.user_2==g.user, MealDate.user_2==g.user)) )).first()
+		if req:
+			session.delete(req)
+			session.commit()
+			return jsonify({'success': 'delete sucessful'})
+		else:
+			return jsonify({'error': 'delete failed'})
 
 #creates documentation
 @app.route('/documentation')
