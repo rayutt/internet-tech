@@ -169,7 +169,7 @@ app.factory('apiRepository', function($http) {
                 controller  : 'logoutController'
             })
 
-             // route for the edit date
+             // route for the oauth login
             .when('/gmail', {
                 templateUrl : 'template/gmail.html',
                 controller  : 'gmailController'
@@ -410,7 +410,8 @@ app.factory('apiRepository', function($http) {
         apiRepository.getAll('proposals').then(function (response) {
             //prints api response
                 if(response && response.success != false){
-                    $scope.proposals = response.proposals;  
+                    $scope.proposals = response.proposals;
+                    $window.location.href = '#/';  
                 }
                 else {
                     //prints api error
