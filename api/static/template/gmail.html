@@ -1,0 +1,32 @@
+
+  <!--LOAD PRE-REQUISITES FOR GOOGLE SIGN IN -->
+  
+
+<!--meta name="google-signin-client_id" content="13140951618-15nik769cellkubaqnjk5facdib2dh4d.apps.googleusercontent.com"-->
+
+<script>
+    gapi.load('auth2', function() {
+      auth2 = gapi.auth2.init({
+        client_id: '950296359546-tr6a0qci8smluvackvmj51bruuu73qos.apps.googleusercontent.com',
+        // Scopes to request in addition to 'profile' and 'email'
+        //scope: 'additional_scope'
+      });
+    });
+  </script>
+
+
+<!-- END PRE-REQUISITES FOR GOOGLE SIGN IN -->
+
+
+
+  <div class="row banner menu">
+    <div class="col-md-11 col-md-offset-1 padding-none">
+      <h1>Login with OAuth 2.0 </h1>
+
+    </div>
+  </div>
+
+
+
+
+<div id="result"></div>

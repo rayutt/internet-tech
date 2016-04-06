@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from passlib.apps import custom_app_context as pwd_context
 import random, string
 from itsdangerous import(TimedJSONWebSignatureSerializer as JSONWebSignatureSerializer, BadSignature, SignatureExpired)
-
+from redis import Redis
 Base = declarative_base()
 
 
@@ -41,7 +41,7 @@ class User(Base):
         return pwd_context.verify(password, hashed_password)
 
     @staticmethod
-    def generate_auth_token(id, expiration=600):
+    def generate_auth_token(id, expiration=1000):
         s = JSONWebSignatureSerializer(secret_key, expires_in = expiration)
         #convert to string
         return s.dumps({'id': id }).decode("utf-8")
@@ -50,15 +50,29 @@ class User(Base):
     def verify_auth_token(token):
         s = JSONWebSignatureSerializer(secret_key)
         try:
-            data = s.loads(token)
+            #verify data is okay or throw exception
+            data = s.loads(token, None, True)
+            print data
+            #check that this token is still valid, should return None to indicate not found in invalid store
+            redis = Redis()
+
+            if redis.get(token) is not None:
+                print redis.get(token)
+                raise Exception('Invalid token')
         except SignatureExpired:
             #Valid Token, but expired
+
             return None
         except BadSignature:
             #Invalid Token
             return None
-        user_id = data['id']
-        return user_id
+        except Exception:
+            #token is found in invalid token list
+            print 'exception'
+            return None
+        #user_id = data[0]['id']
+        #({'id': 2}, {'alg': 'HS256', 'exp': 1559820061, 'iat': 1459814061})
+        return data
 
 
 class Request(Base):
@@ -101,7 +115,6 @@ class Proposal(Base):
             'id' : self.id,
             'user_proposed_to' : self.user_proposed_to,
             'user_proposed_from' : self.user_proposed_from,
-            'location_string' : self.location_string,
             'request_id' : self.request_id,
             'filled' : self.filled
         }
@@ -112,6 +125,7 @@ class MealDate(Base):
     id = Column(Integer, primary_key=True)
     user_1 = Column(Integer, ForeignKey('user.id'))
     user_2 = Column(Integer, ForeignKey('user.id'))
+    
     restaurant_name = Column(String(100))
     restaurant_address = Column(String)
     restaurant_picture = Column(String)

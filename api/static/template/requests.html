@@ -1,0 +1,17 @@
+<!-- list of memebers -->
+<div>
+<h1>List of Requests</h1>
+<div>
+	<table class="table table-striped">
+		<tr><th>Meal Type</th><th>Location</th><th>More info</th></tr>
+	    <tr ng-repeat="x in requests"> 
+	    <td>{{x.meal_type}} </td>
+	    <td>{{x.location_string}}</td>
+	    <td><a href='#/requests/{{x.id}}'>See more</a></td>
+	    </tr>
+	</table>
+
+</div>
+
+
+</div>
