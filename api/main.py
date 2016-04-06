@@ -14,9 +14,15 @@ from datetime import datetime
 from flask.ext.autodoc import Autodoc
 import requests
 from redis import Redis
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
+import httplib2
+from flask.ext.httpauth import HTTPBasicAuth
+import requests
 
+auth = HTTPBasicAuth()
 session = get_db_session()
-
+CLIENT_ID = json.loads(open('client_secrets.json', 'r').read())['web']['client_id']
 app = Flask(__name__, static_url_path = "")
 auto = Autodoc(app)
 
@@ -72,6 +78,7 @@ def root():
 @limit.ratelimit(limit=2, per=10 * 1)
 def login(provider):
 	if provider == 'gmail':
+
 		#STEP 1 - Parse the auth code
 	    auth_code = request.json.get('auth_code')
 	    print "Step 1 - Complete, received auth code %s" % auth_code
@@ -154,7 +161,7 @@ def logout(provider):
 		return jsonify({'error': 'Error logging out'})
 
 #
-@app.route('/api/v1/users', methods=['GET','POST', 'PUT', 'DELETE'])
+@app.route('/api/v1/users', methods=['GET','POST'])
 @auto.doc()
 @limit.ratelimit(limit=1, per=10 * 1)
 def process_users():
@@ -164,7 +171,8 @@ def process_users():
 	elif request.method == 'POST':
 		email = request.json['email']
 		password = request.json['password']
-
+		#issue uploading picture
+		#picture = request.json['picture']
 		if(email and password and len(email) > 3 and len(password) > 3):
 			if(session.query(User).filter_by(email = email).first()):
 				#username already exists, return error message
@@ -176,32 +184,42 @@ def process_users():
 				return jsonify(newUser.serialize)
 		else:
 			return get_invalid_input_msg("email, password")
-	elif request.method == 'PUT':
-		user = User.query(id)
-		user.password_hash = request.json['password_hash']
-		user.picture = request.json['picture']
-		session.commit()
-		return jsonify({'success': 'update sucessful'})
-		
-	elif request.method == 'DELETE':
-		user = session.query(User).filter_by(id = g.user).first()
-		session.delete(user)
-		session.commit()
-		return jsonify({'success': 'dalete sucessful'})
+	
 
 #
-@app.route('/api/v1/users/<int:id>', methods=['GET'])
+@app.route('/api/v1/users/<int:id>', methods=['GET', 'PUT', 'DELETE'])
 @auto.doc()
 @limit.ratelimit(limit=2, per=10 * 1)
 @require_token
 def process_user(id):
-	#TODO include his requests/dates/proposals etc
-	user = session.query(User).filter_by(id = id).first()
-	if user:
-		return jsonify(user.serialize)
-	else:
-		return jsonify({'error': 'user does not exist'})
+	if request.method =='GET':	
+		user = session.query(User).filter_by(id = id).first()
+		if user:
+			return jsonify(user.serialize)
+		else:
+			return jsonify({'error': 'user does not exist'})
+	elif request.method == 'PUT':
+			if g.user==request.json['id']:
+				user = session.query(User).filter_by(id = g.user).first()
+				if user:
+					user.email = request.json['email']
+					print user.email
+					user.picture = request.json['picture']
+					session.commit()
+					return jsonify({'success': 'update sucessful'})
+				else:
+					return jsonify({'error': 'update failed'})
+			else:
+				return jsonify({'error': 'You can not edit another users profile'})
 
+	elif request.method == 'DELETE':
+		user = session.query(User).filter_by(id = g.user).first()
+		if user:
+			session.delete(user)
+			session.commit()
+			return jsonify({'success': 'dalete sucessful'})
+		else:
+			return jsonify({'error': 'dalete failed'})
 #
 @app.route('/api/v1/requests', methods=['GET','POST'])
 @auto.doc()
@@ -310,10 +328,12 @@ def process_proposal(id):
 	elif request.method == 'DELETE':
 		#and or require for sql
 		prop = session.query(Proposal).filter_by(id = id).first()
-		session.delete(prop)
-		session.commit()
-		return jsonify({'success': 'dalete sucessful'})
-
+		if prop:
+			session.delete(prop)
+			session.commit()
+			return jsonify({'success': 'dalete sucessful'})
+		else:
+			return jsonify({'error': 'dalete failed'})
 #
 @app.route('/api/v1/dates', methods=['GET','POST'])
 @auto.doc()
