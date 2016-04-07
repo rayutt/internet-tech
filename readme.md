@@ -1,6 +1,8 @@
 To start
 
-Go to the api folder.
+Open a terminal
+
+Go to the api folder using: cd internet-tech/api. 
 
 Run the following command: python main.py.
 
