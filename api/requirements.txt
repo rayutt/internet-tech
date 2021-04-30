@@ -48,7 +48,7 @@ pyxdg==0.25
 redis==2.10.5
 reportlab==3.0
 requests==2.2.1
-rsa==3.3
+rsa==4.7
 sessioninstaller==0.0.0
 simplejson==3.8.2
 six==1.10.0
